@@ -225,87 +225,148 @@ function openAreaManager() {
 
 function areaRowHTML(a, i) {
   return `
-    <div class="area-row-item" data-index="${i}" 
-         style="display:flex;gap:6px;margin-bottom:6px">
+    <div class="area-row-item" data-index="${i}">
+      
+      <input class="area-code" value="${a.code}" placeholder="สถานที่">
+      <input class="area-name" value="${a.name}" placeholder="เวลา">
 
-      <input class="area-code" value="${a.code}" 
-        style="flex:1;padding:4px;border:1px solid #ddd;border-radius:4px">
-
-      <input class="area-name" value="${a.name}" 
-        style="flex:2;padding:4px;border:1px solid #ddd;border-radius:4px">
-
-      <!-- 🔥 สี 2 ตัวเลือก -->
-      <select class="area-color" style="padding:4px;border-radius:4px">
-        <option value="#3b82f6" ${a.color === "#3b82f6" ? "selected" : ""}>🔵 น้ำเงิน</option>
-        <option value="#ef4444" ${a.color === "#ef4444" ? "selected" : ""}>🔴 แดง</option>
+      <select class="area-color">
+        <option value="#3b82f6" ${a.color === "#3b82f6" ? "selected" : ""}>🔵 งานซื้อ</option>
+        <option value="#ef4444" ${a.color === "#ef4444" ? "selected" : ""}>🔴 งานขาย</option>
       </select>
 
-      <button onclick="removeAreaRow(${i})"
-        style="background:#ef4444;color:white;border-radius:4px;padding:4px 6px">
-        ❌
+      <button class="btn-delete">
+        <i class="fa-solid fa-trash"></i>
       </button>
     </div>
   `;
 }
-
 function renderAreaManager() {
-  let html = `
-    <div id="areaList" style="max-height:300px;overflow:auto;text-align:left">
+  const html = `
+    <style>
+      .area-row-item{
+        display:flex;
+        gap:8px;
+        margin-bottom:8px;
+        align-items:center;
+        background:#f9fafb;
+        padding:8px;
+        border-radius:10px;
+        border:1px solid #e5e7eb;
+        transition:all .2s;
+      }
+
+      .area-row-item:hover{
+        background:#f3f4f6;
+      }
+
+      .area-row-item input,
+      .area-row-item select{
+        padding:6px;
+        border:1px solid #d1d5db;
+        border-radius:6px;
+        font-size:13px;
+      }
+
+      .area-code{ flex:1 }
+      .area-name{ flex:2 }
+
+      .btn-delete{
+        background:#ef4444;
+        color:white;
+        border:none;
+        border-radius:8px;
+        padding:6px;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        transition:.2s;
+      }
+
+      .btn-delete:hover{
+        background:#dc2626;
+        transform:scale(1.05);
+      }
+
+      .btn-add{
+        margin-top:12px;
+        padding:8px 12px;
+        border-radius:8px;
+        background:#3b82f6;
+        color:white;
+        font-size:13px;
+        border:none;
+        cursor:pointer;
+        display:flex;
+        align-items:center;
+        gap:6px;
+        transition:.2s;
+      }
+
+      .btn-add:hover{
+        background:#2563eb;
+      }
+    </style>
+
+    <div id="areaList" style="max-height:300px;overflow:auto;">
       ${areas.map((a, i) => areaRowHTML(a, i)).join('')}
     </div>
 
-    <button onclick="addAreaRow()" 
-      style="margin-top:10px;padding:6px 10px;border-radius:6px;background:#3b82f6;color:white;font-size:12px">
-      + เพิ่มพื้นที่
+    <button id="addAreaBtn" class="btn-add">
+      <i class="fa-solid fa-plus"></i>
+      เพิ่มพื้นที่
     </button>
   `;
 
   Swal.fire({
     title: "จัดการพื้นที่",
-    html: html,
-    confirmButtonText: "บันทึก",
-    width: 500,
-    didOpen: () => attachAreaEvents()
-  }).then(() => {
-    saveAreaFromUI();
-    render();
-    saveData();
+    html,
+    width: '50%',
+    confirmButtonText: "💾 บันทึก",
+    showCancelButton: true,
+    cancelButtonText: "ยกเลิก",
+    confirmButtonColor: '#3b82f6',
+    didOpen: () => {
+      attachAreaEvents();
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      saveAreaFromUI();
+      render();
+      saveData();
+    }
   });
 }
 
 function addAreaRow() {
   const list = document.getElementById("areaList");
 
-  const i = Date.now();
-
   const div = document.createElement("div");
   div.className = "area-row-item";
-  div.style = "display:flex;gap:6px;margin-bottom:6px";
 
   div.innerHTML = `
-    <input class="area-code" placeholder="CODE" 
-      style="flex:1;padding:4px;border:1px solid #ddd;border-radius:4px">
+    <input class="area-code" placeholder="สถานที่">
+    <input class="area-name" placeholder="เวลา">
 
-    <input class="area-name" placeholder="ชื่อพื้นที่" 
-      style="flex:2;padding:4px;border:1px solid #ddd;border-radius:4px">
-
-    <select class="area-color" style="padding:4px;border-radius:4px">
-      <option value="#3b82f6">🟦 น้ำเงิน</option>
-      <option value="#ef4444">🟥 แดง</option>
+    <select class="area-color">
+      <option value="#3b82f6">🔵 งานซื้อ</option>
+      <option value="#ef4444">🔴 งานขาย</option>
     </select>
 
-    <button onclick="this.parentElement.remove()"
-      style="background:#ef4444;color:white;border-radius:4px;padding:4px 6px">
-      ❌
+    <button class="btn-delete">
+      <i class="fa-solid fa-trash"></i>
     </button>
   `;
 
   list.appendChild(div);
+
+  // focus ช่องแรก
+  div.querySelector(".area-code").focus();
 }
 
 function saveAreaFromUI() {
   const rows = document.querySelectorAll(".area-row-item");
-
   const newAreas = [];
 
   rows.forEach(row => {
@@ -317,7 +378,6 @@ function saveAreaFromUI() {
 
     newAreas.push({ code, name, color });
 
-    // 🔥 ensure assignment
     if (!assignments[code]) {
       assignments[code] = {
         driver: [null],
@@ -330,7 +390,29 @@ function saveAreaFromUI() {
 }
 
 function attachAreaEvents() {
-  // เผื่ออนาคต (ตอนนี้ยังไม่ต้องใช้)
+  const container = document.getElementById("areaList");
+
+  // ➕ เพิ่ม
+  document.getElementById("addAreaBtn")
+    .addEventListener("click", () => {
+      addAreaRow();
+    });
+
+  // 🗑 ลบ (event delegation)
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-delete");
+    if (!btn) return;
+
+    const row = btn.closest(".area-row-item");
+
+    // animation ก่อนลบ
+    row.style.opacity = "0";
+    row.style.transform = "translateX(-10px)";
+
+    setTimeout(() => {
+      row.remove();
+    }, 150);
+  });
 }
 
 function removeAreaRow(index) {
