@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Field Staff Assignment Board</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+  <script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        main: ['IBM Plex Sans Thai', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace']
+      }
+    }
+  }
+}
+</script>
+  <style>
+  html, body { height: 100%; margin: 0; }
+  .drag-over { outline: 2px dashed #3b82f6; outline-offset: -2px; background: rgba(59,130,246,0.06) !important; }
+  .drag-over-green { outline: 2px dashed #22c55e; outline-offset: -2px; background: rgba(34,197,94,0.06) !important; }
+  .dragging { opacity: 0.4; transform: scale(0.95); }
+  .staff-card { transition: all 0.15s ease; cursor: grab; }
+  .staff-card:active { cursor: grabbing; }
+  .staff-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .remove-mode .staff-card { cursor: pointer; animation: shake 0.3s ease-in-out infinite alternate; }
+  .remove-mode .staff-card:hover { box-shadow: 0 0 0 2px #ef4444; }
+  @keyframes shake { from { transform: rotate(-0.5deg); } to { transform: rotate(0.5deg); } }
+  .area-row:nth-child(even) .area-name-cell { background: #f8fafc; }
+  .fade-in { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+  .tooltip-badge { font-size: 9px; letter-spacing: 0.5px; }
+  .staff-card {
+  will-change: transform;
+}
+
+.staff-card {
+  width: 100%;
+}
+
+.staff-card:active {
+  opacity: 0.7;
+  transform: scale(0.95);
+}
+</style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full bg-slate-100 font-main">
+  <div id="app" class="h-full flex flex-col overflow-auto w-full"><!-- Header -->
+   <header class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 shadow-lg">
+    <div class="flex items-center gap-3">
+     <div class="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center"><i data-lucide="clipboard-list" class="w-5 h-5 text-white"></i>
+     </div>
+     <div>
+      <h1 id="boardTitle" class="text-lg font-bold leading-tight">Field Staff Assignment Board</h1>
+      <p class="text-xs text-slate-400" id="dateDisplay"></p>
+     </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="toggleRemoveMode()" id="removeModeBtn" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-slate-700 hover:bg-red-600 transition-colors"> 
+        <i data-lucide="user-minus" class="w-3.5 h-3.5">
+        </i> ลบพนักงาน </button>
+      <button onclick="openAreaManager()" 
+        class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-400 text-white transition-colors">
+        <i data-lucide="map" class="w-3.5 h-3.5"></i>
+        จัดการพื้นที่
+      </button>
+      <button onclick="openAddModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 transition-colors"> 
+        <i data-lucide="user-plus" class="w-3.5 h-3.5">
+        </i> เพิ่มพนักงาน </button>
+    </div>
+   </header><!-- Summary Bar -->
+   <div class="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-4 flex-shrink-0 flex-wrap">
+    <div class="flex items-center gap-2"><label class="text-xs text-slate-500 font-medium">วันที่:</label> <input type="date" id="workDate" class="text-xs border border-slate-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none">
+    </div>
+    <div class="h-5 w-px bg-slate-200"></div>
+    <div class="flex items-center gap-2"><span class="text-xs text-slate-500 font-medium">สรุป:</span>
+    </div>
+    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> <span class="text-xs text-slate-600">พนักงานขับรถ: <strong id="sumDrivers" class="text-blue-700 font-mono">0</strong></span>
+    </div>
+    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span> <span class="text-xs text-slate-600">พนักงานติดรถ: <strong id="sumHelpers" class="text-green-700 font-mono">0</strong></span>
+    </div>
+    <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-500 inline-block"></span> <span class="text-xs text-slate-600">รวมทั้งหมด: <strong id="sumTotal" class="text-slate-800 font-mono">0</strong></span>
+    </div>
+    <div class="ml-auto flex items-center gap-1.5"><span class="text-xs text-slate-400">พนักงานว่าง:</span> <strong id="sumUnassigned" class="text-xs text-orange-600 font-mono">0</strong>
+    </div>
+   </div><!-- Table Header -->
+   <div class="bg-slate-700 text-white px-4 flex-shrink-0">
+    <div class="grid" style="grid-template-columns: 160px 110px 1fr 70px;">
+     <div class="py-2 px-2 text-xs font-semibold uppercase tracking-wider text-center">
+      พื้นที่งาน
+     </div>
+     <div class="py-2 px-2 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-400 text-center"></span> Driver
+     </div>
+     <div class="py-2 px-2 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 text-center"></span> Helper
+     </div>
+     <div class="py-2 px-2 text-xs font-semibold uppercase tracking-wider text-center">
+      จำนวน
+     </div>
+    </div>
+   </div><!-- Table Body -->
+   <div id="boardBody" class="flex-1 overflow-auto bg-white"></div>
+  </div><!-- Add Employee Modal -->
+  <div id="addModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4" style="display:none;">
+   <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden fade-in">
+    <div class="bg-slate-800 text-white px-5 py-3 flex items-center justify-between">
+     <h3 class="font-semibold text-sm">เพิ่มพนักงาน</h3>
+     <button onclick="closeAddModal()" class="hover:bg-slate-700 rounded-lg p-1 transition-colors"> 
+      <i data-lucide="x" class="w-4 h-4"></i> </button>
+    </div>
+    <div class="p-5 space-y-4">
+     <div><label class="block text-xs font-semibold text-slate-600 mb-1">เลือกพื้นที่งาน</label>
+       <select id="modalArea" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none"></select>
+     </div>
+     <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1">เลือกพนักงาน</label>
+       <div>
+
+  <input id="employeeSearch"
+    placeholder="พิมพ์ชื่อ..."
+    class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-400">
+
+  <div id="employeeList"
+    class="mt-2 max-h-40 overflow-auto border rounded-lg bg-white"></div>
+
+  <!-- <button onclick="addNewEmployee()"
+    class="mt-2 w-full bg-green-500 hover:bg-green-400 text-white text-xs py-2 rounded-lg">
+    เพิ่มพนักงานใหม่
+  </button> -->
+</div>
+     </div>
+     <div>
+      <label class="block text-xs font-semibold text-slate-600 mb-1.5">ประเภทพนักงาน</label>
+      <div class="flex gap-3">
+        <label class="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-blue-300 bg-blue-50 cursor-pointer has-[:checked]:ring-2 has-[:checked]:ring-blue-500 flex-1"> <input type="radio" name="empType" value="driver" checked class="accent-blue-600"> <span class="text-sm font-medium text-blue-800">🚗 Driver</span> </label> <label class="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-green-300 bg-green-50 cursor-pointer has-[:checked]:ring-2 has-[:checked]:ring-green-500 flex-1"> <input type="radio" name="empType" value="helper" class="accent-green-600"> <span class="text-sm font-medium text-green-800">🧑‍🔧 Helper</span> </label>
+      </div>
+     </div><button onclick="confirmAdd()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-2.5 rounded-lg text-sm transition-colors flex items-center justify-center gap-2"> <i data-lucide="check" class="w-4 h-4"></i> ยืนยัน </button>
+    </div>
+   </div>
+  </div><!-- Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-2.5 rounded-lg shadow-xl text-sm font-medium transition-all translate-y-20 opacity-0 z-50"></div>
+<script src="app.js"></script>
+</body>
+</html>
